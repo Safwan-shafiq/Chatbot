@@ -17,11 +17,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Sirf icons hide karo — baaki sab default streamlit
+# Icons aur Streamlit floating button hide karo
 st.markdown("""
 <style>
 [data-testid="chatAvatarIcon-user"]      { display: none !important; }
 [data-testid="chatAvatarIcon-assistant"] { display: none !important; }
+[data-testid="stStatusWidget"]           { display: none !important; }
+.stDeployButton                          { display: none !important; }
+#streamlit-badge-overflow-button         { display: none !important; }
+.viewerBadge_container__r5tak           { display: none !important; }
+.viewerBadge_link__qRIco                { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
