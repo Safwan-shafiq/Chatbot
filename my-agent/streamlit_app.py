@@ -6,227 +6,149 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 
-# Keys load
 load_dotenv("../.env")
 if "GROQ_API_KEY" not in os.environ:
     os.environ["GROQ_API_KEY"] = st.secrets.get("GROQ_API_KEY", "")
 
-# ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AI Assistant",
-    page_icon="assets/favicon.ico",
+    page_icon="",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# ─── Custom CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
-/* Hide Streamlit default elements */
-#MainMenu, footer, header { visibility: hidden; }
-.stDeployButton { display: none; }
-[data-testid="stToolbar"] { display: none; }
-[data-testid="stDecoration"] { display: none; }
-[data-testid="stSidebarCollapsedControl"] { display: none; }
-
-/* Global */
 * { font-family: 'Inter', sans-serif; }
 
-.stApp {
-    background-color: #0f0f0f;
-    color: #ececec;
-}
+#MainMenu, footer { visibility: hidden; }
+[data-testid="stToolbar"] { display: none; }
+[data-testid="stDecoration"] { display: none; }
 
-/* Main container */
+/* Background */
+.stApp { background-color: #212121; color: #ececec; }
+
+/* Main area */
 .main .block-container {
-    max-width: 760px;
+    max-width: 720px;
     margin: 0 auto;
-    padding: 0 1rem 6rem 1rem;
+    padding: 2rem 1rem 7rem 1rem;
 }
 
-/* Header */
-.chat-header {
-    text-align: center;
-    padding: 3rem 0 2rem 0;
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: #171717 !important;
+    border-right: 1px solid #2f2f2f;
+}
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div {
+    color: #c9c9c9 !important;
+}
+[data-testid="stSidebar"] input {
+    background: #2a2a2a !important;
+    border: 1px solid #3a3a3a !important;
+    border-radius: 8px !important;
+    color: #ececec !important;
+}
+[data-testid="stSidebar"] .stSelectbox > div > div {
+    background: #2a2a2a !important;
+    border: 1px solid #3a3a3a !important;
+    border-radius: 8px !important;
+    color: #ececec !important;
+}
+[data-testid="stSidebar"] .stButton button {
+    background: #2a2a2a !important;
+    border: 1px solid #3a3a3a !important;
+    color: #ececec !important;
+    border-radius: 8px !important;
+    width: 100%;
+}
+[data-testid="stSidebar"] .stButton button:hover {
+    background: #333 !important;
+    border-color: #555 !important;
 }
 
-.chat-header h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #ffffff;
-    margin: 0;
-    letter-spacing: -0.5px;
-}
-
-.chat-header p {
-    color: #666;
-    font-size: 0.85rem;
-    margin-top: 0.4rem;
-}
-
-/* Messages */
-.stChatMessage {
-    background: transparent !important;
-    border: none !important;
-    padding: 0.8rem 0 !important;
-}
-
-/* User message */
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
-    flex-direction: row-reverse;
-}
-
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) 
-[data-testid="stChatMessageContent"] {
-    background: #1f1f1f;
-    border-radius: 18px 18px 4px 18px;
-    padding: 0.8rem 1.1rem;
-    color: #ececec;
-    max-width: 80%;
-    margin-left: auto;
-    font-size: 0.95rem;
-    line-height: 1.6;
-}
-
-/* Assistant message */
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) 
-[data-testid="stChatMessageContent"] {
-    background: transparent;
-    padding: 0.2rem 0.5rem;
-    color: #ececec;
-    font-size: 0.95rem;
-    line-height: 1.7;
-}
-
-/* Hide avatars */
+/* Hide chat avatars completely */
 [data-testid="chatAvatarIcon-user"],
 [data-testid="chatAvatarIcon-assistant"] {
     display: none !important;
 }
 
+/* Chat messages container */
+[data-testid="stChatMessage"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.5rem 0 !important;
+    gap: 0 !important;
+}
+
+/* User message bubble */
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+    flex-direction: row-reverse !important;
+}
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) 
+[data-testid="stChatMessageContent"] {
+    background: #2f2f2f !important;
+    border-radius: 16px 16px 4px 16px !important;
+    padding: 0.75rem 1rem !important;
+    max-width: 75% !important;
+    margin-left: auto !important;
+    color: #ececec !important;
+    font-size: 0.93rem !important;
+    line-height: 1.65 !important;
+}
+
+/* Assistant message - no bubble, just text */
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) 
+[data-testid="stChatMessageContent"] {
+    background: transparent !important;
+    padding: 0.3rem 0.2rem !important;
+    color: #ececec !important;
+    font-size: 0.93rem !important;
+    line-height: 1.75 !important;
+    max-width: 100% !important;
+}
+
 /* Chat input */
 [data-testid="stChatInput"] {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 760px;
-    background: #0f0f0f;
-    padding: 1rem;
-    border-top: 1px solid #1f1f1f;
+    background: #212121 !important;
+    border-top: 1px solid #2f2f2f !important;
+    padding: 1rem !important;
 }
-
 [data-testid="stChatInput"] textarea {
-    background: #1a1a1a !important;
-    border: 1px solid #2a2a2a !important;
+    background: #2a2a2a !important;
+    border: 1px solid #3a3a3a !important;
     border-radius: 12px !important;
     color: #ececec !important;
-    font-size: 0.95rem !important;
-    padding: 0.8rem 1rem !important;
-    resize: none !important;
+    font-size: 0.93rem !important;
 }
-
 [data-testid="stChatInput"] textarea:focus {
-    border-color: #444 !important;
+    border-color: #555 !important;
     box-shadow: none !important;
 }
-
 [data-testid="stChatInput"] button {
-    background: #ffffff !important;
+    background: #ececec !important;
     border-radius: 8px !important;
     color: #000 !important;
 }
 
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background: #141414;
-    border-right: 1px solid #1f1f1f;
-}
-
-[data-testid="stSidebar"] * {
-    color: #ccc !important;
-}
-
-[data-testid="stSidebar"] input {
-    background: #1a1a1a !important;
-    border: 1px solid #2a2a2a !important;
-    color: #ececec !important;
-    border-radius: 8px !important;
-}
-
-[data-testid="stSidebar"] .stSelectbox > div > div {
-    background: #1a1a1a !important;
-    border: 1px solid #2a2a2a !important;
-    border-radius: 8px !important;
-}
-
-/* Sidebar toggle button */
-[data-testid="stSidebarNav"] { display: none; }
-
-/* Spinner */
-.stSpinner > div {
-    border-top-color: #555 !important;
-}
-
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0f0f0f; }
-::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #212121; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
-/* Welcome screen */
-.welcome-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.8rem;
-    margin-top: 2rem;
-}
-
-.welcome-card {
-    background: #1a1a1a;
-    border: 1px solid #2a2a2a;
-    border-radius: 12px;
-    padding: 1rem 1.2rem;
-    cursor: pointer;
-    transition: border-color 0.2s;
-}
-
-.welcome-card:hover {
-    border-color: #444;
-}
-
-.welcome-card p {
-    color: #999;
-    font-size: 0.82rem;
-    margin: 0.3rem 0 0 0;
-}
-
-.welcome-card h4 {
-    color: #ececec;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin: 0;
-}
-
-.model-badge {
-    display: inline-block;
-    background: #1a1a1a;
-    border: 1px solid #2a2a2a;
-    border-radius: 20px;
-    padding: 0.2rem 0.8rem;
-    font-size: 0.75rem;
-    color: #666;
-    margin-top: 0.5rem;
-}
+/* Divider */
+hr { border-color: #2f2f2f !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### Settings")
+    st.markdown("### AI Assistant")
     st.divider()
 
     groq_key = st.text_input(
@@ -236,20 +158,25 @@ with st.sidebar:
         placeholder="gsk_..."
     )
 
+    st.markdown("**Model**")
     model_choice = st.selectbox(
         "Model",
         ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"],
         label_visibility="collapsed"
     )
 
-    temperature = st.slider("Temperature", 0.0, 1.0, 0.7, label_visibility="collapsed")
+    st.markdown("**Temperature**")
+    temperature = st.slider(
+        "Temperature", 0.0, 1.0, 0.7,
+        label_visibility="collapsed"
+    )
 
     st.divider()
-    st.markdown("**Tools**")
-    st.markdown("Web Search · Calculator · Text")
-
+    st.markdown("**Tools available**")
+    st.markdown("- Web Search\n- Calculator\n- Word Counter")
     st.divider()
-    if st.button("New chat", use_container_width=True):
+
+    if st.button("New Conversation"):
         st.session_state.messages = []
         st.rerun()
 
@@ -281,9 +208,7 @@ def web_search(query: str) -> str:
 @tool
 def word_counter(text: str) -> str:
     """Count words and characters in a text."""
-    words = len(text.split())
-    chars = len(text)
-    return f"Words: {words} | Characters: {chars}"
+    return f"Words: {len(text.split())} | Characters: {len(text)}"
 
 tools = [calculator, web_search, word_counter]
 
@@ -299,10 +224,14 @@ if "messages" not in st.session_state:
 # ─── Header ───────────────────────────────────────────────────────────────────
 if not st.session_state.messages:
     st.markdown("""
-    <div class="chat-header">
-        <h1>What can I help with?</h1>
-        <div class="model-badge">Groq + LangGraph</div>
-    </div>
+        <div style='text-align:center; padding: 4rem 0 2rem 0;'>
+            <h2 style='color:#ececec; font-weight:600; font-size:1.8rem; margin:0;'>
+                What can I help with?
+            </h2>
+            <p style='color:#555; font-size:0.82rem; margin-top:0.5rem;'>
+                Powered by Groq + LangGraph
+            </p>
+        </div>
     """, unsafe_allow_html=True)
 
 # ─── Messages ─────────────────────────────────────────────────────────────────
@@ -314,7 +243,7 @@ for message in st.session_state.messages:
 if user_input := st.chat_input("Message AI Assistant..."):
 
     if not groq_key:
-        st.error("Open sidebar and add your Groq API Key")
+        st.error("Please add your Groq API Key in the sidebar.")
         st.stop()
 
     st.session_state.messages.append({"role": "user", "content": user_input})
@@ -336,7 +265,6 @@ if user_input := st.chat_input("Message AI Assistant..."):
 
                 result = agent.invoke({"messages": history})
                 answer = result["messages"][-1].content
-
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
 
