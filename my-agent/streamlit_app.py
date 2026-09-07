@@ -1,9 +1,3 @@
-"""
-LangChain Agent - Streamlit Web UI
-LangChain 1.x + LangGraph compatible
-Run: streamlit run streamlit_app.py
-"""
-
 import os
 import streamlit as st
 from dotenv import load_dotenv
@@ -12,142 +6,328 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 
-# Keys load karo — local mein .env se, Streamlit Cloud mein st.secrets se
+# Keys load
 load_dotenv("../.env")
 if "GROQ_API_KEY" not in os.environ:
     os.environ["GROQ_API_KEY"] = st.secrets.get("GROQ_API_KEY", "")
-if "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = st.secrets.get("GOOGLE_API_KEY", "")
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="My AI Agent",
-    page_icon="🤖",
-    layout="wide"
+    page_title="AI Assistant",
+    page_icon="assets/favicon.ico",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-st.title("🤖 My LangChain AI Agent")
-st.caption("Powered by Groq + LangGraph")
+# ─── Custom CSS ───────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+/* Hide Streamlit default elements */
+#MainMenu, footer, header { visibility: hidden; }
+.stDeployButton { display: none; }
+[data-testid="stToolbar"] { display: none; }
+[data-testid="stDecoration"] { display: none; }
+[data-testid="stSidebarCollapsedControl"] { display: none; }
+
+/* Global */
+* { font-family: 'Inter', sans-serif; }
+
+.stApp {
+    background-color: #0f0f0f;
+    color: #ececec;
+}
+
+/* Main container */
+.main .block-container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 1rem 6rem 1rem;
+}
+
+/* Header */
+.chat-header {
+    text-align: center;
+    padding: 3rem 0 2rem 0;
+}
+
+.chat-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.chat-header p {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+}
+
+/* Messages */
+.stChatMessage {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.8rem 0 !important;
+}
+
+/* User message */
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+    flex-direction: row-reverse;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) 
+[data-testid="stChatMessageContent"] {
+    background: #1f1f1f;
+    border-radius: 18px 18px 4px 18px;
+    padding: 0.8rem 1.1rem;
+    color: #ececec;
+    max-width: 80%;
+    margin-left: auto;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* Assistant message */
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) 
+[data-testid="stChatMessageContent"] {
+    background: transparent;
+    padding: 0.2rem 0.5rem;
+    color: #ececec;
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+/* Hide avatars */
+[data-testid="chatAvatarIcon-user"],
+[data-testid="chatAvatarIcon-assistant"] {
+    display: none !important;
+}
+
+/* Chat input */
+[data-testid="stChatInput"] {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 760px;
+    background: #0f0f0f;
+    padding: 1rem;
+    border-top: 1px solid #1f1f1f;
+}
+
+[data-testid="stChatInput"] textarea {
+    background: #1a1a1a !important;
+    border: 1px solid #2a2a2a !important;
+    border-radius: 12px !important;
+    color: #ececec !important;
+    font-size: 0.95rem !important;
+    padding: 0.8rem 1rem !important;
+    resize: none !important;
+}
+
+[data-testid="stChatInput"] textarea:focus {
+    border-color: #444 !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stChatInput"] button {
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    color: #000 !important;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background: #141414;
+    border-right: 1px solid #1f1f1f;
+}
+
+[data-testid="stSidebar"] * {
+    color: #ccc !important;
+}
+
+[data-testid="stSidebar"] input {
+    background: #1a1a1a !important;
+    border: 1px solid #2a2a2a !important;
+    color: #ececec !important;
+    border-radius: 8px !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox > div > div {
+    background: #1a1a1a !important;
+    border: 1px solid #2a2a2a !important;
+    border-radius: 8px !important;
+}
+
+/* Sidebar toggle button */
+[data-testid="stSidebarNav"] { display: none; }
+
+/* Spinner */
+.stSpinner > div {
+    border-top-color: #555 !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0f0f0f; }
+::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+
+/* Welcome screen */
+.welcome-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-top: 2rem;
+}
+
+.welcome-card {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.welcome-card:hover {
+    border-color: #444;
+}
+
+.welcome-card p {
+    color: #999;
+    font-size: 0.82rem;
+    margin: 0.3rem 0 0 0;
+}
+
+.welcome-card h4 {
+    color: #ececec;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.model-badge {
+    display: inline-block;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 0.5rem;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.header("⚙️ Settings")
+    st.markdown("### Settings")
+    st.divider()
 
     groq_key = st.text_input(
         "Groq API Key",
         value=os.getenv("GROQ_API_KEY", ""),
-        type="password"
+        type="password",
+        placeholder="gsk_..."
     )
 
     model_choice = st.selectbox(
         "Model",
-        ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
+        ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"],
+        label_visibility="collapsed"
     )
 
-    temperature = st.slider("Temperature", 0.0, 1.0, 0.7)
+    temperature = st.slider("Temperature", 0.0, 1.0, 0.7, label_visibility="collapsed")
 
     st.divider()
-    st.markdown("**Available Tools:**")
-    st.markdown("- 🔍 Web Search (DuckDuckGo)")
-    st.markdown("- 🧮 Calculator")
-    st.markdown("- 📝 Text Tools")
+    st.markdown("**Tools**")
+    st.markdown("Web Search · Calculator · Text")
 
-    if st.button("🗑️ Clear Chat"):
+    st.divider()
+    if st.button("New chat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
 # ─── Tools ────────────────────────────────────────────────────────────────────
 @tool
 def calculator(expression: str) -> str:
-    """
-    Simple math calculator.
-    Use this for any math calculations.
-    Input: math expression like '2+2', '10*5', '100/4', '2**10'
-    """
+    """Math calculator. Input: expression like 2+2, 10*5"""
     try:
-        # Safe eval - sirf numbers aur operators allow
         allowed = set("0123456789+-*/().% ")
         if all(c in allowed for c in expression):
-            result = eval(expression)
-            return f"Result: {result}"
-        else:
-            return "Only basic math allowed: + - * / ( ) ."
+            return str(eval(expression))
+        return "Only basic math allowed"
     except Exception as e:
         return f"Error: {str(e)}"
 
 @tool
 def web_search(query: str) -> str:
-    """
-    Search the web for current information.
-    Use this when you need to find recent news, facts, or any online information.
-    Input: search query string
-    """
+    """Search the web for current information."""
     try:
         from duckduckgo_search import DDGS
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=3))
             if not results:
                 return "No results found."
-            output = ""
-            for r in results:
-                output += f"**{r['title']}**\n{r['body']}\n\n"
-            return output
+            return "\n\n".join([f"{r['title']}: {r['body']}" for r in results])
     except Exception as e:
         return f"Search error: {str(e)}"
 
 @tool
 def word_counter(text: str) -> str:
-    """
-    Count words and characters in a text.
-    Input: any text string
-    """
+    """Count words and characters in a text."""
     words = len(text.split())
     chars = len(text)
-    sentences = text.count('.') + text.count('!') + text.count('?')
-    return f"Words: {words} | Characters: {chars} | Sentences: {sentences}"
+    return f"Words: {words} | Characters: {chars}"
 
 tools = [calculator, web_search, word_counter]
 
-# ─── Session State ────────────────────────────────────────────────────────────
+# ─── Agent ────────────────────────────────────────────────────────────────────
+def get_agent(api_key, model, temp):
+    llm = ChatGroq(model=model, api_key=api_key, temperature=temp)
+    return create_react_agent(llm, tools)
+
+# ─── Session ──────────────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ─── Agent Builder ────────────────────────────────────────────────────────────
-def get_agent(api_key: str, model: str, temp: float):
-    llm = ChatGroq(
-        model=model,
-        api_key=api_key,
-        temperature=temp,
-    )
-    agent = create_react_agent(llm, tools)
-    return agent
+# ─── Header ───────────────────────────────────────────────────────────────────
+if not st.session_state.messages:
+    st.markdown("""
+    <div class="chat-header">
+        <h1>What can I help with?</h1>
+        <div class="model-badge">Groq + LangGraph</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# ─── Chat History Display ─────────────────────────────────────────────────────
+# ─── Messages ─────────────────────────────────────────────────────────────────
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# ─── Chat Input ───────────────────────────────────────────────────────────────
-if user_input := st.chat_input("Kuch bhi poocho... (Urdu ya English)"):
+# ─── Input ────────────────────────────────────────────────────────────────────
+if user_input := st.chat_input("Message AI Assistant..."):
 
     if not groq_key:
-        st.error("⚠️ Pehle sidebar mein Groq API Key daalo!")
+        st.error("Open sidebar and add your Groq API Key")
         st.stop()
 
-    # User message show karo
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Agent response
     with st.chat_message("assistant"):
-        with st.spinner("Soch raha hun..."):
+        with st.spinner(""):
             try:
                 agent = get_agent(groq_key, model_choice, temperature)
 
-                # Chat history LangGraph format mein
                 history = []
-                for msg in st.session_state.messages[:-1]:  # last message skip (current)
+                for msg in st.session_state.messages[:-1]:
                     if msg["role"] == "user":
                         history.append(HumanMessage(content=msg["content"]))
                     else:
@@ -161,5 +341,4 @@ if user_input := st.chat_input("Kuch bhi poocho... (Urdu ya English)"):
                 st.session_state.messages.append({"role": "assistant", "content": answer})
 
             except Exception as e:
-                error_msg = f"❌ Error: {str(e)}"
-                st.error(error_msg)
+                st.error(f"Error: {str(e)}")
