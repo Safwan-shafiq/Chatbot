@@ -35,10 +35,14 @@ with st.sidebar:
     st.header("Settings")
 
     groq_key = st.text_input(
-        "Groq API Key",
-        value=os.getenv("GROQ_API_KEY", ""),
+        "Groq API Key (optional — apni key daalo)",
+        value="",
+        placeholder="gsk_...",
         type="password"
     )
+    # Agar user ny khud key nahi daali to background mein secrets wali use ho
+    if not groq_key:
+        groq_key = os.getenv("GROQ_API_KEY", "")
 
     model_choice = st.selectbox(
         "Model",
